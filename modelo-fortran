@@ -1,0 +1,271 @@
+Program Hidrosed 
+
+
+
+  implicit none 
+
+
+  real dt,R(10),K(10),LS(10),CP(10),AQ(10),ERE(10),ER(10),ERT,AB,PS 
+  character titulo*60,arqent*40,arqsai*40 
+  integer NQ 
+  common                                                 /Dados1/
+titulo,dt,NQ,R,K,LS,CP,AQ,ERE,ER,ERT,AB,PS,arqent,arqsai 
+
+  character arqsdr*40 
+  integer NSDR,NBRUNE 
+  real LM,FR1,FR2,RB,SM,SDR,TR,ETA  
+  common /Dados2/ arqsdr,NSDR,LM,FR1,FR2,RB,SM,SDR,TR,ETA,NBRUNE 
+
+  call entrada 
+  call calculo 
+  call saida 
+
+
+End Program 
+
+
+  subroutine entrada
+
+  real dt,R(10),K(10),LS(10),CP(10),AQ(10),ERE(10),ER(10),ERT,AB,PS 
+  character titulo*60,arqent*40,arqsai*40 
+  integer NQ 
+   common                                                  /Dados1/ 
+titulo,dt,NQ,R,K,LS,CP,AQ,ERE,ER,ERT,AB,PS,arqent,arqsai 
+
+   character arqsdr*40 
+   integer NSDR,NBRUNE 
+   real LM,FR1,FR2,RB,SM,SDR,TR,ETA 
+   common /Dados2/ arqsdr,NSDR,LM,FR1,FR2,RB,SM,SDR,TR,ETA,NBRUNE 
+
+
+   integer NC 
+ 
+   write (*,*) 'Digite o nome do arquivo geral de entrada: ' 
+   read  (*,'(a40)') arqent 
+   open  (11,file=arqent,status='old') 
+   read  (11,*) titulo,arqsai,dt,NQ,arqsdr 
+   open  (12,file=arqsdr,status='old') 
+   read  (12,*) NBRUNE,ETA 
+   read  (12,*) NSDR 
+ 
+   NC=1 
+   do while (NC.le.NQ) 
+      read  (11,*) R(NC),K(NC),LS(NC),CP(NC),AQ(NC) 
+      NC=NC+1 
+   end do 
+ 
+end subroutine 
+
+
+subroutine calculo 
+  
+   real dt,R(10),K(10),LS(10),CP(10),AQ(10),ERE(10),ER(10),ERT,AB,PS 
+   character titulo*60,arqent*40,arqsai*40 
+   integer NQ 
+   common                                                  /Dados1/ 
+titulo,dt,NQ,R,K,LS,CP,AQ,ERE,ER,ERT,AB,PS,arqent,arqsai 
+ 
+   character arqsdr*40 
+   integer NSDR,NBRUNE 
+   real LM,FR1,FR2,RB,SM,SDR,TR,ETA 
+   common /Dados2/ arqsdr,NSDR,LM,FR1,FR2,RB,SM,SDR,TR,ETA,NBRUNE 
+ 
+   integer NC 
+ 
+   NC=1 
+   ERT=0 
+   AB=0 
+   do while (NC.le.NQ) 
+      ERE(NC) = R(NC)*K(NC)*LS(NC)*CP(NC) 
+      ER(NC) = ERE(NC)*AQ(NC) 
+      ERT=ERT+ER(NC) 
+      AB=AB+AQ(NC) 
+      NC=NC+1 
+   end do 
+ 
+   select case (NSDR) 
+    case (1) 
+     call Maner 
+    case (2) 
+     call Roehl 
+ 
+ 
+    case (3) 
+     call Williams 
+   end select 
+   PS = ERT*SDR/(AB*dt) 
+ 
+   select case (NBRUNE) 
+    case (1) 
+     ETA=100/(1+exp(-21.881*TR)) 
+    case (2) 
+     ETA=100/(1+exp(-18.146*TR)) 
+    case (3) 
+     ETA=92.07/(1+exp(-14.867*TR)) 
+   end select 
+   write (*,*) 'ETA = ',ETA 
+end subroutine 
+
+
+subroutine Maner 
+ 
+   real dt,R(10),K(10),LS(10),CP(10),AQ(10),ERE(10),ER(10),ERT,AB,PS 
+   character titulo*60,arqent*40,arqsai*40 
+   integer NQ 
+   common                                                  /Dados1/ 
+titulo,dt,NQ,R,K,LS,CP,AQ,ERE,ER,ERT,AB,PS,arqent,arqsai 
+ 
+   character arqsdr*40 
+   integer NSDR,NBRUNE 
+   real LM,FR1,FR2,RB,SM,SDR,TR,ETA 
+   common /Dados2/ arqsdr,NSDR,LM,FR1,FR2,RB,SM,SDR,TR,ETA,NBRUNE 
+
+
+   real FR 
+ 
+   read  (12,*) LM,FR1,FR2 
+   FR = FR1-FR2 
+   if (FR.le.0) then 
+       write (*,*) 'Inconsistencia nos dados topograficos!' 
+       pause 
+             else 
+       SDR = (10**(2.943-0.824*Log10(Lm/FR)))/100. 
+   endif 
+ 
+end subroutine 
+
+
+subroutine Roehl 
+ 
+   real dt,R(10),K(10),LS(10),CP(10),AQ(10),ERE(10),ER(10),ERT,AB,PS 
+   character titulo*60,arqent*40,arqsai*40 
+   integer NQ 
+   common                                                  /Dados1/ 
+titulo,dt,NQ,R,K,LS,CP,AQ,ERE,ER,ERT,AB,PS,arqent,arqsai 
+ 
+   character arqsdr*40 
+   integer NSDR,NBRUNE 
+   real LM,FR1,FR2,RB,SM,SDR,TR,ETA 
+   common /Dados2/ arqsdr,NSDR,LM,FR1,FR2,RB,SM,SDR,TR,ETA,NBRUNE 
+ 
+   real ABmi,FR 
+
+
+!O fator 0.003861 converte ha para mi^2 
+ 
+ 
+   ABmi = AB*0.003861 
+   read  (12,*) LM,FR1,FR2,RB 
+ 
+   FR = FR1-FR2 
+   if (FR.le.0) then 
+          write (*,*) 'Inconsistencia nos dados topograficos!' 
+          pause 
+                else 
+   SDR = (10**(4.27-0.23*log10(ABmi)-0.51*log10(LM/FR)
+2.79*log10(RB)))/100. 
+   endif 
+ 
+end subroutine 
+
+
+subroutine Williams 
+ 
+   real dt,R(10),K(10),LS(10),CP(10),AQ(10),ERE(10),ER(10),ERT,AB,PS 
+   character titulo*60,arqent*40,arqsai*40 
+   integer NQ 
+   common /Dados1/ 
+titulo,dt,NQ,R,K,LS,CP,AQ,ERE,ER,ERT,AB,PS,arqent,arqsai 
+ 
+   character arqsdr*40 
+   integer NSDR,NBRUNE 
+   real LM,FR1,FR2,RB,SM,SDR,TR,ETA 
+   common /Dados2/ arqsdr,NSDR,LM,FR1,FR2,RB,SM,SDR,TR,ETA,NBRUNE 
+ 
+ 
+   read  (12,*) SM 
+  SDR = (62.7*((SM)**0.403))/100.
+
+end subroutine 
+
+
+subroutine saida 
+
+  real dt,R(10),K(10),LS(10),CP(10),AQ(10),ERE(10),ER(10),ERT,AB,PS 
+  character titulo*60,arqent*40,arqsai*40 
+  integer NQ 
+  common                                                  /Dados1/ 
+titulo,dt,NQ,R,K,LS,CP,AQ,ERE,ER,ERT,AB,PS,arqent,arqsai 
+
+
+  character arqsdr*40 
+  integer NSDR,NBRUNE 
+  real LM,FR1,FR2,RB,SM,SDR,TR,ETA 
+  common /Dados2/ arqsdr,NSDR,LM,FR1,FR2,RB,SM,SDR,TR,ETA,NBRUNE 
+
+
+  integer NC 
+  real ASSOR 
+
+   
+  !  open  (13,file=arqsai) 
+
+
+  write (*,*) '            Universidade Federal do Ceara'          
+  write (*,*) '             Centro de Ciencias Agrarias'         
+  write (*,*) '          Departamento de Engenharia Agricola'
+  write (*,*) '                 Curso de Agronomia'       
+  write (*,*) '  Programadores: Jessica Aragao e Jose Carlos de Araujo' 
+  write (*,*) '                          Programa Hidrosed' 
+  write (*,*) '                           Fortaleza, 2020' 
+  write (*,*) '   O programa Hidrosed vem com finalidade de calcular o SDR utilizando' 
+  write (*,*) '                o método de Maner, Roehl e Williams' 
+  write (*,*) '------------------------------------------------------------------' 
+ 
+  write (*,*) 'Titulo do projeto:',titulo 
+  write (*,*) 'Nome do arquivo de saida:',arqsai 
+  write (*,10)'Tempo da erosividade em anos:',dt 
+  write (*,*) 'Numero de quadriculas:',NQ 
+  write (*,*) '------------------------------------------------------------------' 
+
+
+   NC=1 
+   do while (NC.le.NQ) 
+     write (*,*)'Quadricula numero: ',NC 
+!     write  (13,10) 'Erosividade total em MJ.mm/ha/h: ',R(NC) 
+     write  (*,10) 'Erosividade total em MJ.mm/ha/h: ',R(NC) 
+!     write  (13,10) 'Erodibilidade do solo em Mg.h/MJ/mm: ',K(NC) 
+     write  (*,10) 'Erodibilidade do solo em Mg.h/MJ/mm: ',K(NC) 
+!     write  (13,10) 'Fator LS: ',LS(NC) 
+     write  (*,10) 'Fator LS: ',LS(NC) 
+!     write  (13,10) 'Fator CP: ',CP(NC) 
+     write  (*,10) 'Fator CP: ',CP(NC) 
+!     write  (13,10)'Area da quadricula em hectares: ',AQ(NC) 
+     write  (*,10)'Area da quadricula em hectares: ',AQ(NC)  
+!     write  (13,*) '-----------------------------------------------
+    write  (*,*) '-----------------------------------------------------' 
+     
+!    write  (13,10) 'A erosao especifica total = ',ERE,'Mg/ha' 
+!    write  (13,10) 'A erosao bruta total = ',ER,'Mg' 
+!    write  (13,10) 'O valor do SDR calculado = ',SDR 
+!    write  (13,10) 'A producao de sedimentos = ',PS,'Mg/ha/ano' 
+!    write  (13,*) '-----------------------------------------------------'  
+!    write  (13,*) 'Programa finalizado com sucesso!' 
+NC=NC+1 
+
+
+end do 
+    write  (*,10) 'Area total da bacia = ',AB, 'ha' 
+    write  (*,10) 'A erosao bruta total = ',ERT,'Mg' 
+    write  (*,10) 'O valor do SDR calculado = ',SDR 
+    write  (*,10) 'A producao de sedimentos = ',PS,'Mg/ha/ano' 
+    write  (*,10) 'Eficiencia de retencao = ',ETA,'%' 
+    ASSOR = ERT*ETA/100 
+    write  (*,10) 'Assoreamento = ',ASSOR,' Mg' 
+    write  (*,*) '---------------------------------------------------'
+    write  (*,*) 'Programa finalizado com sucesso!' 
+10 format (1x,A29,F10.3,1x,A9) 
+pause 
+
+
+end subroutine
