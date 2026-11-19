@@ -1,0 +1,179 @@
+# hidrosed.py.Tradução
+import math
+
+
+dados = {
+    # /Dados1/
+    "titulo": "", "dt": 0.0, "NQ": 0,
+    "R": [0.0]*10, "K": [0.0]*10, "LS": [0.0]*10,
+    "CP": [0.0]*10, "AQ": [0.0]*10,
+    "ERE": [0.0]*10, "ER": [0.0]*10,
+    "ERT": 0.0, "AB": 0.0, "PS": 0.0,
+    "arqent": "", "arqsai": "",
+    # /Dados2/
+    "arqsdr": "", "NSDR": 0, "NBRUNE": 0,
+    "LM": 0.0, "FR1": 0.0, "FR2": 0.0, "RB": 0.0,
+    "SM": 0.0, "SDR": 0.0, "TR": 0.0, "ETA": 0.0,
+}
+
+# Handles de arquivo (equivalente a OPEN/CLOSE com unidades 11 e 12)
+f11 = None
+f12 = None
+
+
+def entrada():
+    global f11, f12
+    d = dados
+    d["arqent"] = input("Digite o nome do arquivo geral de entrada: ").strip()
+
+    f11 = open(d["arqent"], "r")
+    # Equivalente a: read(11,*) titulo,arqsai,dt,NQ,arqsdr
+    linha = f11.readline().split()
+    d["titulo"] = linha[0] if len(linha) > 0 else ""
+    d["arqsai"] = linha[1] if len(linha) > 1 else ""
+    d["dt"]     = float(linha[2]) if len(linha) > 2 else 0.0
+    d["NQ"]     = int(linha[3])   if len(linha) > 3 else 0
+    d["arqsdr"] = linha[4] if len(linha) > 4 else ""
+
+    f12 = open(d["arqsdr"], "r")
+    linha = f12.readline().split()
+    d["NBRUNE"] = int(linha[0]) if len(linha) > 0 else 0
+    d["ETA"]    = float(linha[1]) if len(linha) > 1 else 0.0
+
+    linha = f12.readline().split()
+    d["NSDR"] = int(linha[0]) if len(linha) > 0 else 0
+
+    NC = 1
+    while NC <= d["NQ"]:
+        linha = f11.readline().split()
+        d["R"][NC-1]  = float(linha[0]) if len(linha) > 0 else 0.0
+        d["K"][NC-1]  = float(linha[1]) if len(linha) > 1 else 0.0
+        d["LS"][NC-1] = float(linha[2]) if len(linha) > 2 else 0.0
+        d["CP"][NC-1] = float(linha[3]) if len(linha) > 3 else 0.0
+        d["AQ"][NC-1] = float(linha[4]) if len(linha) > 4 else 0.0
+        NC += 1
+
+
+def calculo():
+    d = dados
+    NC = 1
+    d["ERT"] = 0.0
+    d["AB"] = 0.0
+    while NC <= d["NQ"]:
+        d["ERE"][NC-1] = d["R"][NC-1] * d["K"][NC-1] * d["LS"][NC-1] * d["CP"][NC-1]
+        d["ER"][NC-1]  = d["ERE"][NC-1] * d["AQ"][NC-1]
+        d["ERT"] += d["ER"][NC-1]
+        d["AB"]  += d["AQ"][NC-1]
+        NC += 1
+
+    if d["NSDR"] == 1:
+        maner()
+    elif d["NSDR"] == 2:
+        roehl()
+    elif d["NSDR"] == 3:
+        williams()
+
+    d["PS"] = d["ERT"] * d["SDR"] / (d["AB"] * d["dt"])
+
+    if d["NBRUNE"] == 1:
+        d["ETA"] = 100 / (1 + math.exp(-21.881 * d["TR"]))
+    elif d["NBRUNE"] == 2:
+        d["ETA"] = 100 / (1 + math.exp(-18.146 * d["TR"]))
+    elif d["NBRUNE"] == 3:
+        d["ETA"] = 92.07 / (1 + math.exp(-14.867 * d["TR"]))
+
+    print("ETA = ", d["ETA"])
+
+
+def maner():
+    d = dados
+    linha = f12.readline().split()
+    d["LM"]  = float(linha[0]) if len(linha) > 0 else 0.0
+    d["FR1"] = float(linha[1]) if len(linha) > 1 else 0.0
+    d["FR2"] = float(linha[2]) if len(linha) > 2 else 0.0
+
+    FR = d["FR1"] - d["FR2"]
+    if FR <= 0:
+        print("Inconsistencia nos dados topograficos!")
+        input("Pressione ENTER para continuar...")  # equivalente ao PAUSE
+    else:
+        d["SDR"] = (10 ** (2.943 - 0.824 * math.log10(d["LM"] / FR))) / 100.0
+
+
+def roehl():
+    d = dados
+    ABmi = d["AB"] * 0.003861  # ha -> mi^2
+
+    linha = f12.readline().split()
+    d["LM"]  = float(linha[0]) if len(linha) > 0 else 0.0
+    d["FR1"] = float(linha[1]) if len(linha) > 1 else 0.0
+    d["FR2"] = float(linha[2]) if len(linha) > 2 else 0.0
+    d["RB"]  = float(linha[3]) if len(linha) > 3 else 0.0
+
+    FR = d["FR1"] - d["FR2"]
+    if FR <= 0:
+        print("Inconsistencia nos dados topograficos!")
+        input("Pressione ENTER para continuar...")
+    else:
+        # ATENÇÃO: no Fortran original, a linha está QUEBRADA sem '&'
+        # e sem operador entre "-0.51*log10(LM/FR)" e "2.79*log10(RB)".
+        # Assumi que era uma soma (sinal +) — CONFIRME com o autor original.
+        d["SDR"] = (10 ** (4.27
+                           - 0.23 * math.log10(ABmi)
+                           - 0.51 * math.log10(d["LM"] / FR)
+                           + 2.79 * math.log10(d["RB"]))) / 100.0
+
+
+def williams():
+    d = dados
+    linha = f12.readline().split()
+    d["SM"] = float(linha[0]) if len(linha) > 0 else 0.0
+    d["SDR"] = (62.7 * (d["SM"] ** 0.403)) / 100.0
+
+
+def saida():
+    d = dados
+    print("            Universidade Federal do Ceara")
+    print("             Centro de Ciencias Agrarias")
+    print("          Departamento de Engenharia Agricola")
+    print("                 Curso de Agronomia")
+    print("  Programadores: Jessica Aragao e Jose Carlos de Araujo")
+    print("                          Programa Hidrosed")
+    print("                           Fortaleza, 2020")
+    print("   O programa Hidrosed vem com finalidade de calcular o SDR utilizando")
+    print("                o metodo de Maner, Roehl e Williams")
+    print("------------------------------------------------------------------")
+
+    print("Titulo do projeto:", d["titulo"])
+    print("Nome do arquivo de saida:", d["arqsai"])
+    print(f"Tempo da erosividade em anos: {d['dt']:10.3f}")
+    print("Numero de quadriculas:", d["NQ"])
+    print("------------------------------------------------------------------")
+
+    NC = 1
+    while NC <= d["NQ"]:
+        print("Quadricula numero: ", NC)
+        print(f"Erosividade total em MJ.mm/ha/h: {d['R'][NC-1]:10.3f}")
+        print(f"Erodibilidade do solo em Mg.h/MJ/mm: {d['K'][NC-1]:10.3f}")
+        print(f"Fator LS: {d['LS'][NC-1]:10.3f}")
+        print(f"Fator CP: {d['CP'][NC-1]:10.3f}")
+        print(f"Area da quadricula em hectares: {d['AQ'][NC-1]:10.3f}")
+        print("-----------------------------------------------------")
+        NC += 1
+
+    print(f"Area total da bacia = {d['AB']:10.3f} ha")
+    print(f"A erosao bruta total = {d['ERT']:10.3f} Mg")
+    print(f"O valor do SDR calculado = {d['SDR']:10.3f}")
+    print(f"A producao de sedimentos = {d['PS']:10.3f} Mg/ha/ano")
+    print(f"Eficiencia de retencao = {d['ETA']:10.3f} %")
+    ASSOR = d["ERT"] * d["ETA"] / 100
+    print(f"Assoreamento = {ASSOR:10.3f} Mg")
+    print("---------------------------------------------------")
+    print("Programa finalizado com sucesso!")
+    input("Pressione ENTER para sair...")
+
+
+if __name__ == "__main__":
+    entrada()
+    calculo()
+    saida()
