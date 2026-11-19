@@ -1,6 +1,5 @@
 # hidrosed.R.Tradução
 
-# Uso um environment para simular variáveis globais mutáveis.
 dados <- new.env()
 dados$titulo <- ""
 dados$dt <- 0.0; dados$NQ <- 0L
@@ -13,7 +12,6 @@ dados$arqsdr <- ""; dados$NSDR <- 0L; dados$NBRUNE <- 0L
 dados$LM <- 0.0; dados$FR1 <- 0.0; dados$FR2 <- 0.0; dados$RB <- 0.0
 dados$SM <- 0.0; dados$SDR <- 0.0; dados$TR <- 0.0; dados$ETA <- 0.0
 
-# Handles de arquivo (equivalente a OPEN com unidades 11 e 12)
 f11 <- NULL
 f12 <- NULL
 
